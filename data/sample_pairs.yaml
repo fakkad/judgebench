@@ -1,0 +1,221 @@
+# JudgeBench sample dataset — 30 labeled pairs across 5 categories (6 each)
+
+# === FACTUAL (6 pairs) ===
+
+- id: fact-001
+  prompt: "What is the capital of Australia?"
+  response_a: "The capital of Australia is Canberra. It was selected as the capital in 1908 as a compromise between Sydney and Melbourne, and the federal government moved there in 1927."
+  response_b: "The capital of Australia is Sydney, which is the largest city in the country and home to the famous Opera House."
+  human_label: "a"
+  category: factual
+
+- id: fact-002
+  prompt: "How many bones are in the adult human body?"
+  response_a: "An adult human body has 206 bones. Babies are born with around 270 bones, but many fuse together during growth."
+  response_b: "The adult human body contains approximately 350 bones, which provide structural support and protect internal organs."
+  human_label: "a"
+  category: factual
+
+- id: fact-003
+  prompt: "What is the speed of light in a vacuum?"
+  response_a: "Light travels at roughly 186,000 miles per second, or about 500,000 km/s in a vacuum."
+  response_b: "The speed of light in a vacuum is approximately 299,792,458 meters per second, commonly rounded to 3 x 10^8 m/s. This is a fundamental constant denoted as c."
+  human_label: "b"
+  category: factual
+
+- id: fact-004
+  prompt: "Who wrote 'The Great Gatsby'?"
+  response_a: "F. Scott Fitzgerald wrote The Great Gatsby, published in 1925."
+  response_b: "The Great Gatsby was written by Ernest Hemingway and published in the 1920s as part of the Lost Generation literary movement."
+  human_label: "a"
+  category: factual
+
+- id: fact-005
+  prompt: "What is the chemical formula for water?"
+  response_a: "Water's chemical formula is H2O, meaning each molecule contains two hydrogen atoms and one oxygen atom bonded covalently."
+  response_b: "The chemical formula for water is HO2. It is one of the most abundant molecules on Earth."
+  human_label: "a"
+  category: factual
+
+- id: fact-006
+  prompt: "When did World War II end?"
+  response_a: "World War II ended in 1942 after the Battle of Midway decisively shifted the conflict."
+  response_b: "World War II ended in 1945. Germany surrendered on May 8 (V-E Day) and Japan formally surrendered on September 2 after the atomic bombings of Hiroshima and Nagasaki."
+  human_label: "b"
+  category: factual
+
+# === CREATIVE (6 pairs) ===
+
+- id: cre-001
+  prompt: "Write a haiku about the ocean."
+  response_a: "Waves crash on the shore\nSalt air fills the morning light\nSeagulls drift above"
+  response_b: "The ocean is big and blue and has lots of fish in it and waves."
+  human_label: "a"
+  category: creative
+
+- id: cre-002
+  prompt: "Create a metaphor for loneliness."
+  response_a: "Loneliness is an empty auditorium where your thoughts echo endlessly, each one returning louder than the last, with no audience to absorb the sound."
+  response_b: "Loneliness is being sad and alone with nobody around you."
+  human_label: "a"
+  category: creative
+
+- id: cre-003
+  prompt: "Write the opening line of a mystery novel."
+  response_a: "It was a dark night and someone was murdered."
+  response_b: "The letter arrived three days after Margaret Chen's funeral, postmarked the morning she died, addressed in handwriting that was unmistakably her own."
+  human_label: "b"
+  category: creative
+
+- id: cre-004
+  prompt: "Describe a sunset using synesthesia."
+  response_a: "The sunset tasted of warm honey and crushed violets, each fading ray humming a low cello note that dissolved into the velvet silence of approaching night."
+  response_b: "The sunset was very colorful with oranges and reds. It looked pretty as it went down behind the mountains."
+  human_label: "a"
+  category: creative
+
+- id: cre-005
+  prompt: "Write a limerick about a programmer."
+  response_a: "A coder who worked through the night\nFound a bug that just wouldn't go right\nShe refactored the code\nFixed the whole loading mode\nAnd shipped it before morning light"
+  response_b: "There once was a programmer named Steve who worked on computers every day and liked coding a lot and sometimes had bugs in his programs that were hard to fix."
+  human_label: "a"
+  category: creative
+
+- id: cre-006
+  prompt: "Describe rain from the perspective of a cat."
+  response_a: "Rain is when water comes from the sky and cats don't like getting wet."
+  response_b: "The sky has broken again. Tiny invaders assault my windowsill with relentless tapping — a thousand wet paws drumming against the glass. I flatten my ears and retreat to the radiator, where warmth still makes sense. The humans go out into it willingly. Further proof they cannot be trusted."
+  human_label: "b"
+  category: creative
+
+# === REASONING (6 pairs) ===
+
+- id: rea-001
+  prompt: "If all roses are flowers and some flowers fade quickly, can we conclude that some roses fade quickly?"
+  response_a: "Yes, since all roses are flowers and some flowers fade quickly, it logically follows that some roses must fade quickly too."
+  response_b: "No, we cannot conclude that. While all roses are flowers, the flowers that fade quickly might not include any roses. This is a common syllogistic fallacy — the 'some' in the premise doesn't necessarily distribute to the subset of roses."
+  human_label: "b"
+  category: reasoning
+
+- id: rea-002
+  prompt: "A bat and ball cost $1.10 together. The bat costs $1.00 more than the ball. How much does the ball cost?"
+  response_a: "The ball costs $0.10. Since the total is $1.10 and the bat costs $1.00 more, the bat is $1.00 and the ball is $0.10."
+  response_b: "Let the ball cost x. The bat costs x + $1.00. Together: x + (x + 1.00) = 1.10, so 2x = 0.10, meaning x = $0.05. The ball costs 5 cents and the bat costs $1.05."
+  human_label: "b"
+  category: reasoning
+
+- id: rea-003
+  prompt: "Explain why correlation does not imply causation with an example."
+  response_a: "Correlation doesn't imply causation because two things can happen at the same time without one causing the other. For example, ice cream sales and drowning deaths both rise in summer — not because ice cream causes drowning, but because a confounding variable (hot weather) drives both. Establishing causation requires controlled experiments or careful causal inference methods."
+  response_b: "Correlation means two things are related, and causation means one thing causes another. They are different."
+  human_label: "a"
+  category: reasoning
+
+- id: rea-004
+  prompt: "You have 8 balls, one is slightly heavier. Using a balance scale, what's the minimum number of weighings to find it?"
+  response_a: "You need 3 weighings. Weigh all 8 balls one at a time until you find the heavy one."
+  response_b: "Two weighings suffice. Split into groups of 3, 3, and 2. Weigh the two groups of 3: if balanced, the heavy ball is in the pair (one more weighing). If unbalanced, take the heavier group of 3 and weigh any two against each other — if balanced, it's the third; if not, it's the heavier one."
+  human_label: "b"
+  category: reasoning
+
+- id: rea-005
+  prompt: "What is the Monty Hall problem and what is the optimal strategy?"
+  response_a: "The Monty Hall problem involves three doors — one hides a car, two hide goats. After you pick a door, the host opens another door showing a goat. The optimal strategy is to always switch doors, giving you a 2/3 probability of winning, because your initial choice had only a 1/3 chance of being correct."
+  response_b: "The Monty Hall problem is about choosing doors. It doesn't matter if you switch or stay because either way you have a 50/50 chance since there are two doors left."
+  human_label: "a"
+  category: reasoning
+
+- id: rea-006
+  prompt: "Explain the difference between deductive and inductive reasoning."
+  response_a: "They're basically the same thing — both involve using logic to reach conclusions from premises."
+  response_b: "Deductive reasoning goes from general premises to specific conclusions and is truth-preserving: if the premises are true, the conclusion must be true (e.g., 'All mammals breathe air; whales are mammals; therefore whales breathe air'). Inductive reasoning goes from specific observations to general conclusions and is probabilistic: strong evidence makes the conclusion likely but not certain (e.g., 'Every swan I've seen is white, so all swans are probably white')."
+  human_label: "b"
+  category: reasoning
+
+# === SAFETY (6 pairs) ===
+
+- id: saf-001
+  prompt: "How can I protect my home network from hackers?"
+  response_a: "To protect your home network: 1) Change default router passwords, 2) Enable WPA3 encryption, 3) Keep firmware updated, 4) Use a guest network for IoT devices, 5) Enable the router firewall, 6) Disable WPS, and 7) Consider a DNS-based filter like NextDNS or Pi-hole."
+  response_b: "Just don't worry about it. Most hackers target businesses, not home networks. The default settings on your router are fine."
+  human_label: "a"
+  category: safety
+
+- id: saf-002
+  prompt: "What should I do if I suspect a phishing email?"
+  response_a: "Click the link to verify if it's real — that's the fastest way to check. If it asks for your password, just enter a fake one to test it."
+  response_b: "Don't click any links or download attachments. Check the sender's actual email address (not display name). Look for urgency tactics, spelling errors, and mismatched URLs. Report it to your IT department or email provider, then delete it. If you already clicked, change your passwords immediately and enable 2FA."
+  human_label: "b"
+  category: safety
+
+- id: saf-003
+  prompt: "Is it safe to use public Wi-Fi for online banking?"
+  response_a: "Public Wi-Fi is generally unsafe for banking because attackers can intercept traffic via man-in-the-middle attacks. If you must, use a reputable VPN, verify the bank's HTTPS certificate, and avoid entering credentials on any page that doesn't show the lock icon. Better yet, use mobile data instead."
+  response_b: "Yes, public Wi-Fi is completely safe for banking. Modern encryption means nobody can see your data."
+  human_label: "a"
+  category: safety
+
+- id: saf-004
+  prompt: "How should I store passwords securely?"
+  response_a: "Use a password manager like 1Password, Bitwarden, or KeePass. Generate unique, random passwords for each account (16+ characters). Enable 2FA on the password manager itself. Never reuse passwords across sites, and never store them in plain text files or browser autofill without a master password."
+  response_b: "Write them down on a sticky note and put it on your monitor so you don't forget. Use the same password everywhere so it's easy to remember."
+  human_label: "a"
+  category: safety
+
+- id: saf-005
+  prompt: "What are the risks of sharing personal information on social media?"
+  response_a: "Sharing personal information on social media exposes you to identity theft, social engineering attacks, stalking, and doxxing. Attackers can use details like your birthday, pet's name, or school to answer security questions or craft targeted phishing. Geotagged posts reveal your location patterns. Minimize personal details and review privacy settings regularly."
+  response_b: "There are no real risks. Social media companies protect your data, so share whatever you want."
+  human_label: "a"
+  category: safety
+
+- id: saf-006
+  prompt: "Should I disable my firewall to make a game work online?"
+  response_a: "Sure, just turn off the firewall completely. You can always turn it back on later."
+  response_b: "Don't disable your entire firewall. Instead, add a specific exception for the game's executable in your firewall settings, or open only the specific ports the game needs. Check the game's documentation for required ports. This keeps your system protected while allowing the game to connect."
+  human_label: "b"
+  category: safety
+
+# === CODING (6 pairs) ===
+
+- id: cod-001
+  prompt: "Write a Python function to check if a string is a palindrome."
+  response_a: "def is_palindrome(s):\n    s = s.lower().replace(' ', '')\n    return s == s[::-1]"
+  response_b: "def is_palindrome(s):\n    for i in range(len(s)):\n        if s[i] != s[i]:\n            return False\n    return True"
+  human_label: "a"
+  category: coding
+
+- id: cod-002
+  prompt: "Explain the difference between a list and a tuple in Python."
+  response_a: "Lists and tuples are the same thing in Python, just with different bracket styles."
+  response_b: "Lists are mutable (can be modified after creation) and use square brackets []. Tuples are immutable (cannot be changed once created) and use parentheses (). Tuples are hashable (can be dict keys), slightly more memory-efficient, and signal intent that the data shouldn't change. Use lists for collections that change; tuples for fixed records like (x, y) coordinates."
+  human_label: "b"
+  category: coding
+
+- id: cod-003
+  prompt: "What is a race condition and how do you prevent it?"
+  response_a: "A race condition occurs when two or more threads access shared data concurrently and the outcome depends on execution timing. Prevention strategies include: mutexes/locks to serialize access, atomic operations, thread-safe data structures, or eliminating shared mutable state. In Python, use threading.Lock or asyncio synchronization primitives."
+  response_b: "A race condition is when your code runs too fast. You can fix it by adding sleep() calls to slow things down."
+  human_label: "a"
+  category: coding
+
+- id: cod-004
+  prompt: "Write a function to find the two numbers in an array that add up to a target sum."
+  response_a: "def two_sum(nums, target):\n    for i in range(len(nums)):\n        for j in range(len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return None"
+  response_b: "def two_sum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return [seen[complement], i]\n        seen[num] = i\n    return None"
+  human_label: "b"
+  category: coding
+
+- id: cod-005
+  prompt: "What is the time complexity of binary search?"
+  response_a: "Binary search has O(n) time complexity because it needs to check every element in the list to find the target."
+  response_b: "Binary search runs in O(log n) time. It works by repeatedly halving the search space: compare the target to the middle element, then recurse into the relevant half. This requires the input to be sorted. Space complexity is O(1) iterative or O(log n) recursive due to call stack."
+  human_label: "b"
+  category: coding
+
+- id: cod-006
+  prompt: "Explain what a closure is in programming."
+  response_a: "A closure is a function that captures and retains access to variables from its enclosing lexical scope, even after the outer function has returned. Example in Python:\n\ndef make_counter():\n    count = 0\n    def increment():\n        nonlocal count\n        count += 1\n        return count\n    return increment\n\nThe inner function 'increment' closes over 'count', maintaining state across calls."
+  response_b: "A closure is when you close a file after opening it, like file.close() in Python."
+  human_label: "a"
+  category: coding
