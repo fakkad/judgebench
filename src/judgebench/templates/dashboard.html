@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JudgeBench Calibration Dashboard</title>
+<style>
+  :root {
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--muted); }
+  .header { margin-bottom: 2rem; }
+  .header .subtitle { color: var(--muted); font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+  .metric-label { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .green { color: var(--green); }
+  .yellow { color: var(--yellow); }
+  .red { color: var(--red); }
+  .bias-bar {
+    display: flex; align-items: center; margin: 0.5rem 0;
+  }
+  .bias-bar .label { width: 140px; font-size: 0.85rem; }
+  .bias-bar .bar-bg {
+    flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .bias-bar .bar-fill {
+    height: 100%; border-radius: 4px; transition: width 0.3s;
+  }
+  .bias-bar .score { width: 50px; text-align: right; font-size: 0.85rem; margin-left: 0.5rem; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem;
+  }
+  th, td {
+    padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+  .match-yes { color: var(--green); }
+  .match-no { color: var(--red); }
+  .confusion-table td, .confusion-table th {
+    text-align: center; width: 80px;
+  }
+  .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--muted); }
+  canvas { max-width: 300px; margin: 0 auto; display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>JudgeBench Calibration Dashboard</h1>
+  <div class="subtitle">{{ judge_provider }} / {{ judge_model }} &mdash; {{ total_pairs }} pairs, {{ total_verdicts }} verdicts</div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="metric-label">Overall Reliability</div>
+    <div class="metric-value {{ reliability_color }}">{{ "%.3f"|format(overall_reliability) }}</div>
+    <div class="metric-label">
+      {% if reliability_color == 'green' %}Reliable{% elif reliability_color == 'yellow' %}Marginal{% else %}Unreliable{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="metric-label">Raw Agreement</div>
+    <div class="metric-value">{{ "%.3f"|format(raw_agreement) }}</div>
+  </div>
+
+  <div class="card">
+    <div class="metric-label">Cohen's Kappa</div>
+    <div class="metric-value">{{ "%.3f"|format(cohens_kappa) }}</div>
+  </div>
+
+  <div class="card">
+    <div class="metric-label">Krippendorff's Alpha</div>
+    <div class="metric-value">{{ "%.3f"|format(krippendorff_alpha) }}</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Statistical Tests</h2>
+    <div class="stat-row">
+      <span class="stat-label">McNemar chi-squared</span>
+      <span>{{ "%.4f"|format(mcnemar_chi2) }}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">McNemar p-value</span>
+      <span>{{ "%.4f"|format(mcnemar_p) }}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Cohen's Kappa</span>
+      <span>{{ "%.4f"|format(cohens_kappa) }}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Krippendorff's Alpha</span>
+      <span>{{ "%.4f"|format(krippendorff_alpha) }}</span>
+    </div>
+    {% if per_category %}
+    {% for cat, val in per_category.items() %}
+    <div class="stat-row">
+      <span class="stat-label">Agreement ({{ cat }})</span>
+      <span>{{ "%.3f"|format(val) }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Bias Scores</h2>
+    {% for report in bias_reports %}
+    <div class="bias-bar">
+      <span class="label">{{ report.bias_type }}</span>
+      <div class="bar-bg">
+        <div class="bar-fill {{ bias_color(report.score) }}"
+             style="width: {{ (report.score * 100)|int }}%; background: var(--{{ bias_color(report.score) }});">
+        </div>
+      </div>
+      <span class="score {{ bias_color(report.score) }}">{{ "%.2f"|format(report.score) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if confusion %}
+  <div class="card">
+    <h2>Confusion Matrix (Human vs Judge)</h2>
+    <table class="confusion-table">
+      <tr>
+        <th></th>
+        {% for cat in confusion.categories %}
+        <th>Judge: {{ cat }}</th>
+        {% endfor %}
+      </tr>
+      {% for i, cat in enumerate(confusion.categories) %}
+      <tr>
+        <th>Human: {{ cat }}</th>
+        {% for val in confusion.matrix[i] %}
+        <td>{{ val }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+  <h2>Per-Pair Details</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Human</th>
+        <th>Judge</th>
+        <th>Match</th>
+        <th>Confidence</th>
+        <th>Reasoning</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in pair_details %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.human_label }}</td>
+        <td>{{ p.judge_label }}</td>
+        <td class="{% if p.match %}match-yes{% else %}match-no{% endif %}">
+          {% if p.match %}Yes{% else %}No{% endif %}
+        </td>
+        <td>{{ p.confidence }}</td>
+        <td>{{ p.reasoning }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

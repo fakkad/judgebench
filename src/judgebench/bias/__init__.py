@@ -1,13 +1,13 @@
-"""Bias detection modules for JudgeBench."""
+"""Bias detection modules."""
 
-from judgebench.bias.leniency import detect as detect_leniency
-from judgebench.bias.position import detect as detect_position
-from judgebench.bias.self_enhance import detect as detect_self_enhance
-from judgebench.bias.verbosity import detect as detect_verbosity
+from judgebench.bias.position import detect_position_bias
+from judgebench.bias.verbosity import detect_verbosity_bias
+from judgebench.bias.leniency import detect_leniency_bias
+from judgebench.bias.self_enhancement import detect_self_enhancement_bias
 
 __all__ = [
-    "detect_position",
-    "detect_verbosity",
-    "detect_self_enhance",
-    "detect_leniency",
+    "detect_position_bias",
+    "detect_verbosity_bias",
+    "detect_leniency_bias",
+    "detect_self_enhancement_bias",
 ]

@@ -1,60 +1,83 @@
 """Verbosity bias detector.
 
-Measures whether the judge systematically prefers longer responses
-by computing Spearman correlation between chosen response length and a
-binary score (1 = chosen, 0 = not chosen).
+Checks whether a judge systematically favors longer responses regardless of
+quality, by computing the correlation between response length difference and
+verdict direction.
 """
 
-from scipy.stats import spearmanr
+from __future__ import annotations
 
-from judgebench.models import JudgeVerdict, LabeledPair
+import numpy as np
+
+from judgebench.models import BiasReport, JudgeVerdict, LabeledPair
 
 
-def detect(pairs: list[LabeledPair], verdicts: list[JudgeVerdict]) -> float:
-    """Compute verbosity bias as Spearman correlation.
+def detect_verbosity_bias(
+    verdicts: list[JudgeVerdict],
+    pairs: list[LabeledPair],
+) -> BiasReport:
+    """Detect verbosity bias.
 
-    For each pair, we record the length of both responses and whether each
-    was chosen (1) or not (0). Then compute Spearman rho between length
-    and chosen status across all responses.
+    Computes Pearson correlation between (len_a - len_b) and verdict direction.
+    Verdict direction: +1 if judge picks A, -1 if picks B, 0 if tie.
 
-    Args:
-        pairs: List of labeled pairs with response text
-        verdicts: List of judge verdicts
+    A positive correlation means the judge favors whichever response is longer.
 
-    Returns:
-        Spearman rho. Positive = prefers longer responses. Returns 0.0 if
-        insufficient data or constant values.
+    Score = |correlation| normalized to [0, 1].
     """
     pair_map = {p.id: p for p in pairs}
 
-    lengths: list[int] = []
-    chosen: list[int] = []
+    length_diffs: list[float] = []
+    verdict_directions: list[float] = []
 
     for v in verdicts:
-        pair = pair_map.get(v.pair_id)
-        if pair is None:
+        if v.pair_id not in pair_map:
             continue
+        pair = pair_map[v.pair_id]
 
-        # Use forward_choice as the primary verdict
-        choice = v.forward_choice
+        if v.position == "original":
+            len_a = len(pair.response_a)
+            len_b = len(pair.response_b)
+        else:
+            # Swapped: A shown as B and vice versa
+            len_a = len(pair.response_b)
+            len_b = len(pair.response_a)
 
-        len_a = len(pair.response_a)
-        len_b = len(pair.response_b)
+        length_diffs.append(float(len_a - len_b))
 
-        # Response A
-        lengths.append(len_a)
-        chosen.append(1 if choice == "a" else 0)
+        if v.judge_label == "A":
+            verdict_directions.append(1.0)
+        elif v.judge_label == "B":
+            verdict_directions.append(-1.0)
+        else:
+            verdict_directions.append(0.0)
 
-        # Response B
-        lengths.append(len_b)
-        chosen.append(1 if choice == "b" else 0)
+    if len(length_diffs) < 3:
+        return BiasReport(
+            bias_type="verbosity",
+            score=0.0,
+            details={"note": "insufficient data for correlation"},
+            flagged=False,
+        )
 
-    if len(lengths) < 3:
-        return 0.0
+    x = np.array(length_diffs)
+    y = np.array(verdict_directions)
 
-    # Check for constant arrays (Spearman undefined)
-    if len(set(lengths)) <= 1 or len(set(chosen)) <= 1:
-        return 0.0
+    # Pearson correlation
+    if np.std(x) == 0 or np.std(y) == 0:
+        r = 0.0
+    else:
+        r = float(np.corrcoef(x, y)[0, 1])
 
-    rho, _ = spearmanr(lengths, chosen)
-    return float(rho) if rho == rho else 0.0  # NaN check
+    score = min(abs(r), 1.0)
+
+    return BiasReport(
+        bias_type="verbosity",
+        score=score,
+        details={
+            "pearson_r": r,
+            "n_verdicts": len(length_diffs),
+            "favors_longer": r > 0,
+        },
+        flagged=score > 0.3,
+    )

@@ -5,27 +5,21 @@ build-backend = "hatchling.build"
 [project]
 name = "judgebench"
 version = "0.1.0"
-description = "CLI tool that evaluates LLM judge quality via bias detection and calibration reports"
-requires-python = ">=3.12"
-license = "MIT"
+description = "LLM judge quality evaluator with bias detection and calibration dashboard"
+requires-python = ">=3.11"
 dependencies = [
     "typer>=0.9.0",
     "pydantic>=2.0",
-    "rich>=13.0",
-    "anthropic>=0.39.0",
-    "scipy>=1.12.0",
-    "scikit-learn>=1.4.0",
-    "krippendorff>=0.7.0",
-    "matplotlib>=3.8.0",
-    "jinja2>=3.1.0",
     "pyyaml>=6.0",
+    "jinja2>=3.1",
+    "httpx>=0.27",
+    "numpy>=1.26",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
-    "pytest-cov>=4.0",
-    "ruff>=0.2.0",
+    "pytest>=7.0",
+    "pytest-asyncio>=0.23",
 ]
 
 [project.scripts]
@@ -36,6 +30,4 @@ packages = ["src/judgebench"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
-[tool.ruff]
-target-version = "py312"
+asyncio_mode = "auto"

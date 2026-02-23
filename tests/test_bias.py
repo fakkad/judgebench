@@ -1,269 +1,210 @@
-"""Tests for bias detectors using synthetic data (no LLM calls)."""
+"""Tests for bias detectors with deterministic inputs."""
 
 import pytest
 
-from judgebench.bias.leniency import detect as detect_leniency
-from judgebench.bias.position import detect as detect_position
-from judgebench.bias.self_enhance import detect as detect_self_enhance
-from judgebench.bias.verbosity import detect as detect_verbosity
-from judgebench.models import JudgeVerdict, LabeledPair
+from judgebench.models import BiasReport, JudgeConfig, JudgeVerdict, LabeledPair
+from judgebench.bias.position import detect_position_bias
+from judgebench.bias.verbosity import detect_verbosity_bias
+from judgebench.bias.leniency import detect_leniency_bias
+from judgebench.bias.self_enhancement import detect_self_enhancement_bias
 
 
-def _make_pair(
-    pair_id: str,
-    human_label: str = "a",
-    response_a: str = "Short A",
-    response_b: str = "Short B",
-    category: str = "factual",
-    metadata: dict | None = None,
-) -> LabeledPair:
-    return LabeledPair(
-        id=pair_id,
-        prompt="Test prompt",
-        response_a=response_a,
-        response_b=response_b,
-        human_label=human_label,
-        category=category,
-        metadata=metadata or {},
+def _verdict(pair_id: str, label: str, position: str, confidence: float = 0.8) -> JudgeVerdict:
+    return JudgeVerdict(
+        pair_id=pair_id,
+        judge_label=label,
+        confidence=confidence,
+        reasoning="test",
+        position=position,
     )
 
 
-def _make_verdict(
-    pair_id: str,
-    forward: str = "a",
-    reversed_: str = "a",
-    consistent: bool | None = None,
-) -> JudgeVerdict:
-    if consistent is None:
-        consistent = forward == reversed_
-    return JudgeVerdict(
-        pair_id=pair_id,
-        forward_choice=forward,
-        reversed_choice=reversed_,
-        forward_reasoning="Forward reasoning",
-        reversed_reasoning="Reversed reasoning",
-        consistent=consistent,
+def _pair(pid: str, label: str, len_a: int = 100, len_b: int = 100, **meta) -> LabeledPair:
+    return LabeledPair(
+        id=pid,
+        prompt="Test prompt",
+        response_a="x" * len_a,
+        response_b="y" * len_b,
+        human_label=label,
+        metadata=meta,
     )
 
 
 class TestPositionBias:
-    def test_no_bias(self):
-        """All verdicts consistent -> 0 position bias."""
+    def test_no_bias_consistent(self):
+        """Judge always picks the same underlying response regardless of position."""
         verdicts = [
-            _make_verdict("p1", "a", "a", True),
-            _make_verdict("p2", "b", "b", True),
-            _make_verdict("p3", "a", "a", True),
+            # pair-1: picks A in original, picks B in swapped (= original A) -> consistent
+            _verdict("p1", "A", "original"),
+            _verdict("p1", "B", "swapped"),
+            # pair-2: picks B in original, picks A in swapped (= original B) -> consistent
+            _verdict("p2", "B", "original"),
+            _verdict("p2", "A", "swapped"),
         ]
-        assert detect_position(verdicts) == 0.0
+        report = detect_position_bias(verdicts)
+        assert report.score == pytest.approx(0.0)
+        assert not report.flagged
 
-    def test_full_bias(self):
-        """All verdicts inconsistent -> 1.0 position bias."""
+    def test_full_position_bias(self):
+        """Judge always picks whichever is shown first (position 1)."""
         verdicts = [
-            _make_verdict("p1", "a", "b", False),
-            _make_verdict("p2", "b", "a", False),
+            # pair-1: picks A (first) in original, picks A (first) in swapped -> inconsistent
+            _verdict("p1", "A", "original"),
+            _verdict("p1", "A", "swapped"),
+            # pair-2: same pattern
+            _verdict("p2", "A", "original"),
+            _verdict("p2", "A", "swapped"),
         ]
-        assert detect_position(verdicts) == 1.0
+        report = detect_position_bias(verdicts)
+        assert report.score == pytest.approx(1.0)
+        assert report.flagged
 
     def test_partial_bias(self):
-        """Mix of consistent and inconsistent."""
         verdicts = [
-            _make_verdict("p1", "a", "a", True),
-            _make_verdict("p2", "a", "b", False),
-            _make_verdict("p3", "b", "b", True),
-            _make_verdict("p4", "b", "a", False),
+            _verdict("p1", "A", "original"),
+            _verdict("p1", "B", "swapped"),  # consistent
+            _verdict("p2", "A", "original"),
+            _verdict("p2", "A", "swapped"),  # inconsistent
         ]
-        assert detect_position(verdicts) == 0.5
+        report = detect_position_bias(verdicts)
+        assert report.score == pytest.approx(0.5)
 
-    def test_excludes_ties(self):
-        """Ties in human labels should be excluded."""
-        pairs = [
-            _make_pair("p1", human_label="a"),
-            _make_pair("p2", human_label="tie"),
-            _make_pair("p3", human_label="b"),
-        ]
-        verdicts = [
-            _make_verdict("p1", "a", "a", True),
-            _make_verdict("p2", "a", "b", False),  # tie, should be excluded
-            _make_verdict("p3", "b", "a", False),
-        ]
-        # Only p1 (consistent) and p3 (inconsistent) count -> 0.5
-        result = detect_position(verdicts, pairs)
-        assert result == 0.5
-
-    def test_empty_verdicts(self):
-        assert detect_position([]) == 0.0
+    def test_no_pairs(self):
+        report = detect_position_bias([])
+        assert report.score == 0.0
 
 
 class TestVerbosityBias:
-    def test_prefers_longer(self):
-        """Judge always picks the longer response -> positive rho."""
+    def test_no_bias(self):
+        """Judge picks based on quality, not length."""
         pairs = [
-            _make_pair("p1", response_a="short", response_b="a much longer response here"),
-            _make_pair("p2", response_a="tiny", response_b="this is a significantly longer response"),
-            _make_pair("p3", response_a="sm", response_b="a very lengthy and detailed response text"),
+            _pair("p1", "A", len_a=50, len_b=200),   # short A is better
+            _pair("p2", "B", len_a=200, len_b=50),    # short B is better
+            _pair("p3", "A", len_a=200, len_b=50),    # long A is better
+            _pair("p4", "B", len_a=50, len_b=200),    # long B is better
         ]
         verdicts = [
-            _make_verdict("p1", "b", "b"),  # picks longer
-            _make_verdict("p2", "b", "b"),  # picks longer
-            _make_verdict("p3", "b", "b"),  # picks longer
+            _verdict("p1", "A", "original"),  # picks short
+            _verdict("p2", "B", "original"),  # picks short
+            _verdict("p3", "A", "original"),  # picks long
+            _verdict("p4", "B", "original"),  # picks long
         ]
-        rho = detect_verbosity(pairs, verdicts)
-        assert rho > 0.0, f"Expected positive rho, got {rho}"
+        report = detect_verbosity_bias(verdicts, pairs)
+        assert report.score < 0.3
+        assert not report.flagged
 
-    def test_prefers_shorter(self):
-        """Judge always picks the shorter response -> negative rho."""
+    def test_always_picks_longer(self):
+        """Judge always picks the longer response."""
         pairs = [
-            _make_pair("p1", response_a="short", response_b="a much longer response here"),
-            _make_pair("p2", response_a="tiny", response_b="this is a significantly longer response"),
-            _make_pair("p3", response_a="sm", response_b="a very lengthy and detailed response text"),
+            _pair("p1", "A", len_a=200, len_b=50),
+            _pair("p2", "A", len_a=200, len_b=50),
+            _pair("p3", "B", len_a=50, len_b=200),
+            _pair("p4", "B", len_a=50, len_b=200),
         ]
         verdicts = [
-            _make_verdict("p1", "a", "a"),  # picks shorter
-            _make_verdict("p2", "a", "a"),  # picks shorter
-            _make_verdict("p3", "a", "a"),  # picks shorter
+            _verdict("p1", "A", "original"),  # picks longer A
+            _verdict("p2", "A", "original"),  # picks longer A
+            _verdict("p3", "B", "original"),  # picks longer B
+            _verdict("p4", "B", "original"),  # picks longer B
         ]
-        rho = detect_verbosity(pairs, verdicts)
-        assert rho < 0.0, f"Expected negative rho, got {rho}"
+        report = detect_verbosity_bias(verdicts, pairs)
+        assert report.score > 0.8
+        assert report.flagged
 
-    def test_no_length_correlation(self):
-        """Equal length responses -> rho near 0."""
-        pairs = [
-            _make_pair("p1", response_a="abcde", response_b="fghij"),
-            _make_pair("p2", response_a="klmno", response_b="pqrst"),
-            _make_pair("p3", response_a="uvwxy", response_b="zabcd"),
-        ]
-        verdicts = [
-            _make_verdict("p1", "a", "a"),
-            _make_verdict("p2", "b", "b"),
-            _make_verdict("p3", "a", "a"),
-        ]
-        rho = detect_verbosity(pairs, verdicts)
-        assert abs(rho) < 0.5, f"Expected near-zero rho, got {rho}"
-
-    def test_empty_data(self):
-        assert detect_verbosity([], []) == 0.0
-
-
-class TestSelfEnhanceBias:
-    def test_self_enhancement_detected(self):
-        """Judge always picks its own model's output."""
-        judge_model = "claude-test"
-        pairs = [
-            _make_pair(
-                "p1",
-                metadata={"source_model_a": "claude-test", "source_model_b": "gpt-4"},
-            ),
-            _make_pair(
-                "p2",
-                metadata={"source_model_a": "gpt-4", "source_model_b": "claude-test"},
-            ),
-        ]
-        verdicts = [
-            _make_verdict("p1", "a", "a"),  # picks claude-test (a)
-            _make_verdict("p2", "b", "b"),  # picks claude-test (b)
-        ]
-        delta = detect_self_enhance(pairs, verdicts, judge_model)
-        assert delta > 0.0, f"Expected positive delta, got {delta}"
-
-    def test_no_self_enhancement(self):
-        """Judge never picks its own output."""
-        judge_model = "claude-test"
-        pairs = [
-            _make_pair(
-                "p1",
-                metadata={"source_model_a": "claude-test", "source_model_b": "gpt-4"},
-            ),
-            _make_pair(
-                "p2",
-                metadata={"source_model_a": "gpt-4", "source_model_b": "claude-test"},
-            ),
-        ]
-        verdicts = [
-            _make_verdict("p1", "b", "b"),  # picks gpt-4 (b)
-            _make_verdict("p2", "a", "a"),  # picks gpt-4 (a)
-        ]
-        delta = detect_self_enhance(pairs, verdicts, judge_model)
-        assert delta < 0.0, f"Expected negative delta, got {delta}"
-
-    def test_no_self_generated_responses(self):
-        """No source_model metadata -> returns 0.0."""
-        pairs = [
-            _make_pair("p1"),
-            _make_pair("p2"),
-        ]
-        verdicts = [
-            _make_verdict("p1", "a", "a"),
-            _make_verdict("p2", "b", "b"),
-        ]
-        delta = detect_self_enhance(pairs, verdicts, "claude-test")
-        assert delta == 0.0
+    def test_insufficient_data(self):
+        report = detect_verbosity_bias([], [])
+        assert report.score == 0.0
 
 
 class TestLeniencyBias:
-    def test_lenient_judge(self):
-        """Judge agrees with human on 'a' more than 'b' -> positive leniency."""
+    def test_matching_distributions(self):
+        """Judge distribution matches human distribution."""
         pairs = [
-            _make_pair("p1", human_label="a"),
-            _make_pair("p2", human_label="a"),
-            _make_pair("p3", human_label="b"),
-            _make_pair("p4", human_label="b"),
+            _pair("p1", "A"),
+            _pair("p2", "B"),
+            _pair("p3", "A"),
+            _pair("p4", "tie"),
         ]
         verdicts = [
-            _make_verdict("p1", "a", "a"),  # TP
-            _make_verdict("p2", "a", "a"),  # TP
-            _make_verdict("p3", "a", "a"),  # FP
-            _make_verdict("p4", "b", "b"),  # TN
+            _verdict("p1", "A", "original"),
+            _verdict("p2", "B", "original"),
+            _verdict("p3", "A", "original"),
+            _verdict("p4", "tie", "original"),
         ]
-        # TPR = 2/2 = 1.0, TNR = 1/2 = 0.5, leniency = 0.5
-        leniency = detect_leniency(pairs, verdicts)
-        assert leniency == pytest.approx(0.5)
+        report = detect_leniency_bias(verdicts, pairs)
+        assert report.score == pytest.approx(0.0)
+        assert not report.flagged
 
-    def test_strict_judge(self):
-        """Judge agrees with human on 'b' more than 'a' -> negative leniency."""
+    def test_excess_ties(self):
+        """Judge gives many more ties than humans."""
         pairs = [
-            _make_pair("p1", human_label="a"),
-            _make_pair("p2", human_label="a"),
-            _make_pair("p3", human_label="b"),
-            _make_pair("p4", human_label="b"),
+            _pair("p1", "A"),
+            _pair("p2", "B"),
+            _pair("p3", "A"),
+            _pair("p4", "B"),
         ]
         verdicts = [
-            _make_verdict("p1", "a", "a"),  # TP
-            _make_verdict("p2", "b", "b"),  # FN
-            _make_verdict("p3", "b", "b"),  # TN
-            _make_verdict("p4", "b", "b"),  # TN
+            _verdict("p1", "tie", "original"),
+            _verdict("p2", "tie", "original"),
+            _verdict("p3", "tie", "original"),
+            _verdict("p4", "tie", "original"),
         ]
-        # TPR = 1/2 = 0.5, TNR = 2/2 = 1.0, leniency = -0.5
-        leniency = detect_leniency(pairs, verdicts)
-        assert leniency == pytest.approx(-0.5)
+        report = detect_leniency_bias(verdicts, pairs)
+        assert report.score > 0.5
+        assert report.flagged
 
-    def test_balanced_judge(self):
-        """Judge agrees equally -> leniency near 0."""
+    def test_empty(self):
+        report = detect_leniency_bias([], [])
+        assert report.score == 0.0
+
+
+class TestSelfEnhancementBias:
+    def test_no_model_metadata(self):
+        """Without model metadata, can't detect bias."""
+        pairs = [_pair("p1", "A")]
+        verdicts = [_verdict("p1", "A", "original")]
+        config = JudgeConfig(model="claude-haiku-4-5-20251001")
+        report = detect_self_enhancement_bias(verdicts, pairs, config)
+        assert report.score == 0.0
+
+    def test_self_preference(self):
+        """Judge from Anthropic family prefers Anthropic responses over human baseline."""
         pairs = [
-            _make_pair("p1", human_label="a"),
-            _make_pair("p2", human_label="b"),
+            _pair("p1", "B", model_a="gpt-4o", model_b="claude-3-opus"),
+            _pair("p2", "B", model_a="gpt-4o", model_b="claude-3-sonnet"),
+            _pair("p3", "A", model_a="gpt-4o", model_b="claude-3-haiku"),
+            _pair("p4", "A", model_a="gpt-4o", model_b="claude-3-5-sonnet"),
         ]
+        # Judge always picks the claude response (self-preference)
         verdicts = [
-            _make_verdict("p1", "a", "a"),  # TP
-            _make_verdict("p2", "b", "b"),  # TN
+            _verdict("p1", "B", "original"),
+            _verdict("p2", "B", "original"),
+            _verdict("p3", "B", "original"),  # disagrees with human
+            _verdict("p4", "B", "original"),  # disagrees with human
         ]
-        # TPR = 1.0, TNR = 1.0, leniency = 0.0
-        leniency = detect_leniency(pairs, verdicts)
-        assert leniency == pytest.approx(0.0)
+        config = JudgeConfig(model="claude-haiku-4-5-20251001")
+        report = detect_self_enhancement_bias(verdicts, pairs, config)
+        # Judge self-preference = 4/4 = 1.0, human = 2/4 = 0.5
+        # excess = 0.5, score = min(1.0, 0.5 * 2) = 1.0
+        assert report.score > 0.5
+        assert report.flagged
 
-    def test_excludes_ties(self):
-        """Pairs with human_label='tie' should be skipped."""
+    def test_no_self_preference(self):
+        """Judge from Anthropic family doesn't favor its own outputs."""
         pairs = [
-            _make_pair("p1", human_label="a"),
-            _make_pair("p2", human_label="tie"),
-            _make_pair("p3", human_label="b"),
+            _pair("p1", "A", model_a="gpt-4o", model_b="claude-3-opus"),
+            _pair("p2", "A", model_a="gpt-4o", model_b="claude-3-sonnet"),
         ]
+        # Judge picks GPT (not self) both times, matching human
         verdicts = [
-            _make_verdict("p1", "a", "a"),  # TP
-            _make_verdict("p2", "a", "a"),  # skipped (tie)
-            _make_verdict("p3", "b", "b"),  # TN
+            _verdict("p1", "A", "original"),
+            _verdict("p2", "A", "original"),
         ]
-        leniency = detect_leniency(pairs, verdicts)
-        assert leniency == pytest.approx(0.0)
+        config = JudgeConfig(model="claude-haiku-4-5-20251001")
+        report = detect_self_enhancement_bias(verdicts, pairs, config)
+        assert report.score == pytest.approx(0.0)
 
-    def test_empty_data(self):
-        assert detect_leniency([], []) == 0.0
+    def test_unknown_judge_family(self):
+        config = JudgeConfig(model="some-unknown-model-v1")
+        report = detect_self_enhancement_bias([], [], config)
+        assert report.score == 0.0

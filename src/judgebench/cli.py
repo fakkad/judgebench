@@ -1,156 +1,260 @@
-"""CLI entry point for JudgeBench."""
+"""CLI interface for judgebench."""
 
+from __future__ import annotations
+
+import asyncio
 import json
+import sys
 from pathlib import Path
-from typing import Annotated, Optional
 
 import typer
-from rich.console import Console
-from rich.table import Table
+import yaml
 
-from judgebench import __version__
-from judgebench.agreement import compute_agreement
-from judgebench.bias import (
-    detect_leniency,
-    detect_position,
-    detect_self_enhance,
-    detect_verbosity,
-)
-from judgebench.judge import DEFAULT_MODEL, run_judge
-from judgebench.loader import load_pairs
-from judgebench.models import BiasReport, JudgeVerdict
-from judgebench.reporter import generate_report
+from judgebench.models import BenchResult, Dataset, JudgeConfig, JudgeVerdict
 
 app = typer.Typer(
     name="judgebench",
-    help="Evaluate LLM judge quality with bias detection and agreement metrics.",
+    help="LLM judge quality evaluator with bias detection and calibration dashboard.",
     no_args_is_help=True,
 )
-console = Console()
+
+
+def _load_dataset(path: str) -> Dataset:
+    """Load and validate a YAML dataset."""
+    with open(path) as f:
+        raw = yaml.safe_load(f)
+    return Dataset(**raw)
+
+
+def _save_results(result: BenchResult, output_dir: Path) -> Path:
+    """Save results to JSON."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "results.json"
+    out_path.write_text(result.model_dump_json(indent=2))
+    return out_path
 
 
 @app.command()
 def run(
-    data: Annotated[
-        Path,
-        typer.Option("--data", "-d", help="Path to labeled pairs (YAML or JSONL)"),
-    ],
-    output: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output path for results JSONL"),
-    ] = Path("results.jsonl"),
-    model: Annotated[
-        str,
-        typer.Option("--model", "-m", help="Anthropic model ID for the judge"),
-    ] = DEFAULT_MODEL,
-    api_key: Annotated[
-        Optional[str],
-        typer.Option("--api-key", envvar="ANTHROPIC_API_KEY", help="Anthropic API key"),
-    ] = None,
-) -> None:
-    """Run the judge on a labeled dataset and save results."""
-    console.print(f"[bold cyan]JudgeBench[/] v{__version__}")
-    console.print(f"Loading pairs from [bold]{data}[/]...")
+    dataset_path: str = typer.Argument(..., help="Path to labeled dataset YAML"),
+    judge_model: str = typer.Option("claude-haiku-4-5-20251001", "--judge-model", "-m", help="Judge model name"),
+    judge_provider: str = typer.Option("anthropic", "--judge-provider", "-p", help="Judge provider (anthropic/openai)"),
+    output_dir: str = typer.Option("./results", "--output-dir", "-o", help="Output directory"),
+    concurrency: int = typer.Option(5, "--concurrency", "-c", help="Max concurrent LLM calls"),
+    system_prompt: str = typer.Option(None, "--system-prompt", "-s", help="Custom system prompt for judge"),
+):
+    """Run judge evaluation against a labeled dataset."""
+    typer.echo(f"Loading dataset: {dataset_path}")
+    dataset = _load_dataset(dataset_path)
+    typer.echo(f"Loaded {len(dataset.pairs)} pairs from '{dataset.name}'")
 
-    pairs = load_pairs(data)
-    console.print(f"Loaded [bold]{len(pairs)}[/] pairs across {len({p.category for p in pairs})} categories")
+    judge_config = JudgeConfig(
+        provider=judge_provider,
+        model=judge_model,
+        system_prompt=system_prompt,
+    )
 
-    console.print(f"Running judge: [bold]{model}[/]")
-    verdicts = run_judge(pairs, model=model, api_key=api_key)
+    def progress(done: int, total: int):
+        typer.echo(f"  [{done}/{total}] verdicts collected", nl=False)
+        typer.echo("\r", nl=False)
 
-    # Write results
+    typer.echo(f"Running judge: {judge_provider}/{judge_model}")
+    typer.echo(f"Concurrency: {concurrency}")
+
+    from judgebench.judge_runner import run_judge
+
+    result = asyncio.run(run_judge(dataset, judge_config, concurrency, progress))
+    typer.echo("")
+
+    # Save results
+    out = Path(output_dir)
+    results_path = _save_results(result, out)
+    typer.echo(f"Results saved: {results_path}")
+
+    # Generate dashboard
+    from judgebench.dashboard import generate_dashboard
+
+    dash_path = generate_dashboard(result, dataset, str(out / "dashboard.html"))
+    typer.echo(f"Dashboard saved: {dash_path}")
+
+    # Summary
+    typer.echo("")
+    typer.echo("--- Summary ---")
+    typer.echo(f"Overall reliability: {result.overall_reliability:.3f}")
+    typer.echo(f"Raw agreement: {result.agreement_metrics.get('raw_agreement', 0):.3f}")
+    typer.echo(f"Cohen's kappa: {result.agreement_metrics.get('cohens_kappa', 0):.3f}")
+    typer.echo(f"Krippendorff's alpha: {result.agreement_metrics.get('krippendorff_alpha_nominal', 0):.3f}")
+
+    for b in result.bias_reports:
+        flag = " [FLAGGED]" if b.flagged else ""
+        typer.echo(f"Bias ({b.bias_type}): {b.score:.3f}{flag}")
+
+    # Exit code based on reliability
+    alpha = result.agreement_metrics.get("krippendorff_alpha_nominal", 0)
+    if alpha < 0.67:
+        typer.echo("\nJudge is UNRELIABLE (alpha < 0.67)")
+        raise typer.Exit(code=1)
+    else:
+        typer.echo("\nJudge is RELIABLE (alpha >= 0.67)")
+
+
+@app.command()
+def analyze(
+    results_path: str = typer.Argument(..., help="Path to results.json"),
+    dataset_path: str = typer.Option(None, "--dataset", "-d", help="Original dataset YAML (for per-pair details)"),
+    output_dir: str = typer.Option(None, "--output-dir", "-o", help="Output directory for dashboard"),
+):
+    """Re-generate dashboard from saved results."""
+    raw = json.loads(Path(results_path).read_text())
+    result = BenchResult(**raw)
+
+    dataset = None
+    if dataset_path:
+        dataset = _load_dataset(dataset_path)
+
+    out_dir = output_dir or str(Path(results_path).parent)
+    from judgebench.dashboard import generate_dashboard
+
+    dash_path = generate_dashboard(result, dataset, str(Path(out_dir) / "dashboard.html"))
+    typer.echo(f"Dashboard saved: {dash_path}")
+
+
+@app.command()
+def compare(
+    results1: str = typer.Argument(..., help="First results.json"),
+    results2: str = typer.Argument(..., help="Second results.json"),
+    output_dir: str = typer.Option("./comparison", "--output-dir", "-o"),
+):
+    """Compare two judge results."""
+    from judgebench.compare import compare_results
+
+    r1 = BenchResult(**json.loads(Path(results1).read_text()))
+    r2 = BenchResult(**json.loads(Path(results2).read_text()))
+
+    comparison = compare_results(r1, r2)
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    out_path = out / "comparison.json"
+    out_path.write_text(json.dumps(comparison, indent=2))
+    typer.echo(f"Comparison saved: {out_path}")
+
+    # Print summary
+    typer.echo("")
+    typer.echo(f"Judge A: {comparison['judge_a']['provider']}/{comparison['judge_a']['model']}")
+    typer.echo(f"Judge B: {comparison['judge_b']['provider']}/{comparison['judge_b']['model']}")
+    typer.echo("")
+
+    rel = comparison["reliability"]
+    typer.echo(f"Reliability: A={rel['judge_a']:.3f}  B={rel['judge_b']:.3f}  (better: {rel['better']})")
+
+    for key, data in comparison["agreement_metrics"].items():
+        typer.echo(f"{key}: A={data['judge_a']:.3f}  B={data['judge_b']:.3f}  (better: {data['better']})")
+
+    for bt, data in comparison["bias_comparison"].items():
+        typer.echo(f"Bias ({bt}): A={data['judge_a']:.3f}  B={data['judge_b']:.3f}  (better: {data['better']})")
+
+
+@app.command()
+def validate(
+    dataset_path: str = typer.Argument(..., help="Path to dataset YAML"),
+):
+    """Validate a dataset YAML file."""
+    try:
+        dataset = _load_dataset(dataset_path)
+        typer.echo(f"Valid dataset: '{dataset.name}'")
+        typer.echo(f"  Pairs: {len(dataset.pairs)}")
+        typer.echo(f"  Description: {dataset.description}")
+
+        # Check for duplicate IDs
+        ids = [p.id for p in dataset.pairs]
+        dupes = [x for x in ids if ids.count(x) > 1]
+        if dupes:
+            typer.echo(f"  WARNING: Duplicate IDs: {set(dupes)}")
+        else:
+            typer.echo("  No duplicate IDs")
+
+        # Label distribution
+        from collections import Counter
+        dist = Counter(p.human_label for p in dataset.pairs)
+        typer.echo(f"  Labels: {dict(dist)}")
+
+    except Exception as e:
+        typer.echo(f"Invalid dataset: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def init(
+    output: str = typer.Option("example_pairs.yaml", "--output", "-o", help="Output file path"),
+):
+    """Generate an example dataset YAML file."""
+    example = {
+        "name": "judge-eval-v1",
+        "description": "Example labeled pairs for judge calibration",
+        "pairs": [
+            {
+                "id": "pair-001",
+                "prompt": "Explain quantum computing to a 5-year-old",
+                "response_a": "Imagine you have a magic coin that can be both heads and tails at the same time! That's kind of like how a quantum computer works. Regular computers use coins that are either heads or tails, but quantum computers use these magic coins called qubits.",
+                "response_b": "Quantum computing uses qubits instead of classical bits to perform computations leveraging superposition and entanglement principles.",
+                "human_label": "A",
+                "metadata": {"category": "explanation", "difficulty": "easy"},
+            },
+            {
+                "id": "pair-002",
+                "prompt": "Write a haiku about programming",
+                "response_a": "Code flows like water\nBugs swim upstream in the night\nTests catch them at dawn",
+                "response_b": "Programming is fun\nI like to write code all day\nComputers are cool",
+                "human_label": "A",
+                "metadata": {"category": "creative", "difficulty": "easy"},
+            },
+            {
+                "id": "pair-003",
+                "prompt": "What is the capital of France?",
+                "response_a": "Paris",
+                "response_b": "The capital of France is Paris. It has been the capital since the 10th century and is the country's largest city, known for landmarks like the Eiffel Tower and the Louvre.",
+                "human_label": "B",
+                "metadata": {"category": "factual", "difficulty": "easy"},
+            },
+        ],
+    }
+
     with open(output, "w") as f:
-        for v in verdicts:
-            f.write(v.model_dump_json() + "\n")
+        yaml.dump(example, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    typer.echo(f"Example dataset written to: {output}")
 
-    console.print(f"[green]Results written to {output}[/]")
 
-    # Quick summary
-    consistent = sum(1 for v in verdicts if v.consistent)
-    console.print(
-        f"Consistency: {consistent}/{len(verdicts)} "
-        f"({consistent / len(verdicts) * 100:.1f}%)"
+@app.command(name="generate-synthetic")
+def generate_synthetic_cmd(
+    base_dataset: str = typer.Option(..., "--base-dataset", "-b", help="Seed dataset YAML"),
+    count: int = typer.Option(170, "--count", "-n", help="Number of synthetic pairs to generate"),
+    model: str = typer.Option("claude-haiku-4-5-20251001", "--model", "-m"),
+    provider: str = typer.Option("anthropic", "--provider", "-p"),
+    output: str = typer.Option("synthetic_pairs.yaml", "--output", "-o"),
+    concurrency: int = typer.Option(5, "--concurrency", "-c"),
+):
+    """Generate synthetic pairs from a seed dataset."""
+    from judgebench.synthetic import generate_synthetic
+
+    dataset = _load_dataset(base_dataset)
+    typer.echo(f"Seed dataset: {len(dataset.pairs)} pairs")
+    typer.echo(f"Generating {count} synthetic pairs...")
+
+    def progress(done: int, total: int):
+        typer.echo(f"  [{done}/{total}]", nl=False)
+        typer.echo("\r", nl=False)
+
+    result = asyncio.run(
+        generate_synthetic(dataset, count, provider, model, concurrency, progress)
     )
+    typer.echo("")
 
+    # Save as YAML
+    with open(output, "w") as f:
+        yaml.dump(result.model_dump(), f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
-@app.command()
-def report(
-    results: Annotated[
-        Path,
-        typer.Argument(help="Path to results JSONL from 'run' command"),
-    ],
-    data: Annotated[
-        Path,
-        typer.Option("--data", "-d", help="Path to original labeled pairs"),
-    ] = Path("data/sample_pairs.yaml"),
-    output: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output path for HTML report"),
-    ] = Path("report.html"),
-    model: Annotated[
-        str,
-        typer.Option("--model", "-m", help="Judge model ID (for self-enhancement)"),
-    ] = DEFAULT_MODEL,
-) -> None:
-    """Generate an HTML bias dashboard from results."""
-    console.print(f"[bold cyan]JudgeBench[/] Report Generator")
-
-    # Load data
-    pairs = load_pairs(data)
-
-    verdicts: list[JudgeVerdict] = []
-    with open(results) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                verdicts.append(JudgeVerdict(**json.loads(line)))
-
-    console.print(f"Loaded {len(pairs)} pairs and {len(verdicts)} verdicts")
-
-    # Compute bias metrics
-    position = detect_position(verdicts, pairs)
-    verbosity = detect_verbosity(pairs, verdicts)
-    self_enhance = detect_self_enhance(pairs, verdicts, model)
-    leniency = detect_leniency(pairs, verdicts)
-
-    bias = BiasReport(
-        position_bias_rate=position,
-        verbosity_bias_rho=verbosity,
-        self_enhance_delta=self_enhance,
-        leniency_score=leniency,
-    )
-
-    # Compute agreement
-    agreement = compute_agreement(pairs, verdicts)
-
-    # Display summary
-    table = Table(title="Bias Metrics")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="bold")
-    table.add_row("Position Bias Rate", f"{position:.3f}")
-    table.add_row("Verbosity Bias (rho)", f"{verbosity:.3f}")
-    table.add_row("Self-Enhancement Delta", f"{self_enhance:.3f}")
-    table.add_row("Leniency Score", f"{leniency:.3f}")
-    console.print(table)
-
-    table2 = Table(title="Agreement Metrics")
-    table2.add_column("Metric", style="cyan")
-    table2.add_column("Value", style="bold")
-    table2.add_row("Cohen's Kappa", f"{agreement.cohens_kappa:.4f}")
-    table2.add_row("Krippendorff's Alpha", f"{agreement.krippendorffs_alpha:.4f}")
-    table2.add_row("Spearman rho", f"{agreement.spearman_rho:.4f} (p={agreement.spearman_p:.4f})")
-    table2.add_row("McNemar's chi2", f"{agreement.mcnemars_chi2:.4f} (p={agreement.mcnemars_p:.4f})")
-    console.print(table2)
-
-    # Generate HTML
-    report_path = generate_report(pairs, verdicts, bias, agreement, output)
-    console.print(f"[green]Report written to {report_path}[/]")
-
-
-@app.command()
-def version() -> None:
-    """Show JudgeBench version."""
-    console.print(f"[bold cyan]JudgeBench[/] v{__version__}")
+    typer.echo(f"Generated {len(result.pairs)} synthetic pairs -> {output}")
 
 
 if __name__ == "__main__":

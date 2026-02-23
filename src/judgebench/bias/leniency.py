@@ -1,65 +1,86 @@
 """Leniency bias detector.
 
-Measures whether the judge is systematically more lenient (higher TPR)
-or stricter (higher TNR) compared to human labels.
+Checks whether a judge gives more 'tie' verdicts than humans or systematically
+avoids declaring a winner.
 """
 
-from judgebench.models import JudgeVerdict, LabeledPair
+from __future__ import annotations
+
+from judgebench.models import BiasReport, JudgeVerdict, LabeledPair
 
 
-def detect(pairs: list[LabeledPair], verdicts: list[JudgeVerdict]) -> float:
-    """Compute leniency score as TPR / (TPR + FNR) asymmetry.
+def detect_leniency_bias(
+    verdicts: list[JudgeVerdict],
+    pairs: list[LabeledPair],
+) -> BiasReport:
+    """Detect leniency bias.
 
-    We treat human_label="a" as the positive class. Then:
-    - TP = judge picks "a" when human says "a"
-    - FN = judge picks "b" when human says "a"
-    - TN = judge picks "b" when human says "b"
-    - FP = judge picks "a" when human says "b"
+    Compares the judge's tie rate against the human tie rate.
+    Also checks if the judge systematically avoids picking the losing response.
 
-    Leniency = TPR - TNR, where:
-    - TPR = TP / (TP + FN)
-    - TNR = TN / (TN + FP)
-
-    A positive value means the judge is more lenient (agrees more when
-    human says "a"). A negative value means the judge is stricter.
-
-    Args:
-        pairs: List of labeled pairs with human labels
-        verdicts: List of judge verdicts
-
-    Returns:
-        Leniency score between -1.0 and 1.0.
-        Returns 0.0 if insufficient data.
+    Leniency index = |judge_tie_rate - human_tie_rate| + excess_tie_rate
+    Normalized to [0, 1].
     """
+    if not verdicts or not pairs:
+        return BiasReport(
+            bias_type="leniency",
+            score=0.0,
+            details={"note": "no data"},
+            flagged=False,
+        )
+
+    # Human tie rate
+    human_ties = sum(1 for p in pairs if p.human_label == "tie")
+    human_tie_rate = human_ties / len(pairs) if pairs else 0.0
+
+    # Judge tie rate (use only original position to avoid double-counting)
+    original_verdicts = [v for v in verdicts if v.position == "original"]
+    if not original_verdicts:
+        original_verdicts = verdicts  # fallback if no position info
+
+    judge_ties = sum(1 for v in original_verdicts if v.judge_label == "tie")
+    judge_tie_rate = judge_ties / len(original_verdicts)
+
+    # Tie rate difference
+    tie_diff = judge_tie_rate - human_tie_rate
+
+    # Label distribution divergence
     pair_map = {p.id: p for p in pairs}
+    judge_a = sum(1 for v in original_verdicts if v.judge_label == "A")
+    judge_b = sum(1 for v in original_verdicts if v.judge_label == "B")
+    human_a = sum(1 for p in pairs if p.human_label == "A")
+    human_b = sum(1 for p in pairs if p.human_label == "B")
 
-    tp = 0
-    fn = 0
-    tn = 0
-    fp = 0
+    n_judge = len(original_verdicts)
+    n_human = len(pairs)
 
-    for v in verdicts:
-        pair = pair_map.get(v.pair_id)
-        if pair is None:
-            continue
+    judge_dist = {
+        "A": judge_a / n_judge if n_judge else 0,
+        "B": judge_b / n_judge if n_judge else 0,
+        "tie": judge_tie_rate,
+    }
+    human_dist = {
+        "A": human_a / n_human if n_human else 0,
+        "B": human_b / n_human if n_human else 0,
+        "tie": human_tie_rate,
+    }
 
-        human = pair.human_label
-        judge = v.forward_choice
+    # Leniency score: primarily driven by excess ties
+    # Also penalize general distribution divergence
+    excess_ties = max(0.0, tie_diff)
+    dist_divergence = sum(abs(judge_dist[k] - human_dist[k]) for k in ["A", "B", "tie"]) / 2.0
 
-        # Skip ties in human labels
-        if human == "tie":
-            continue
+    score = min(1.0, excess_ties + dist_divergence * 0.5)
 
-        if human == "a" and judge == "a":
-            tp += 1
-        elif human == "a" and judge == "b":
-            fn += 1
-        elif human == "b" and judge == "b":
-            tn += 1
-        elif human == "b" and judge == "a":
-            fp += 1
-
-    tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    tnr = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-
-    return tpr - tnr
+    return BiasReport(
+        bias_type="leniency",
+        score=score,
+        details={
+            "judge_tie_rate": judge_tie_rate,
+            "human_tie_rate": human_tie_rate,
+            "tie_rate_difference": tie_diff,
+            "judge_distribution": judge_dist,
+            "human_distribution": human_dist,
+        },
+        flagged=score > 0.3,
+    )

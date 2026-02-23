@@ -1,0 +1,272 @@
+name: "judge-eval-v1"
+description: "30 manually labeled pairs for judge calibration"
+pairs:
+  - id: "pair-001"
+    prompt: "Explain quantum computing to a 5-year-old"
+    response_a: "Imagine you have a magic coin that can be both heads and tails at the same time! That's kind of like how a quantum computer works. Regular computers use coins that are either heads or tails, but quantum computers use these magic coins called qubits. When you have lots of magic coins together, they can solve puzzles super fast!"
+    response_b: "Quantum computing uses qubits instead of classical bits to perform computations leveraging superposition and entanglement principles for exponential speedup on certain problem classes."
+    human_label: "A"
+    metadata:
+      category: "explanation"
+      difficulty: "easy"
+
+  - id: "pair-002"
+    prompt: "Write a haiku about programming"
+    response_a: "Code flows like water\nBugs swim upstream in the night\nTests catch them at dawn"
+    response_b: "Programming is fun\nI like to write code all day\nComputers are cool"
+    human_label: "A"
+    metadata:
+      category: "creative"
+      difficulty: "easy"
+
+  - id: "pair-003"
+    prompt: "What is the capital of France?"
+    response_a: "Paris"
+    response_b: "The capital of France is Paris. It has been the capital since the 10th century and is the country's largest city, known for landmarks like the Eiffel Tower, the Louvre Museum, and Notre-Dame Cathedral."
+    human_label: "B"
+    metadata:
+      category: "factual"
+      difficulty: "easy"
+
+  - id: "pair-004"
+    prompt: "Explain the difference between a stack and a queue"
+    response_a: "A stack is LIFO (Last In, First Out) - think of a stack of plates. You add and remove from the top. A queue is FIFO (First In, First Out) - think of a line at a store. The first person in line gets served first. Both are fundamental data structures used differently depending on whether you need to process things in order (queue) or reverse order (stack)."
+    response_b: "Stack = LIFO, Queue = FIFO. They are data structures."
+    human_label: "A"
+    metadata:
+      category: "technical"
+      difficulty: "medium"
+
+  - id: "pair-005"
+    prompt: "Write a limerick about AI"
+    response_a: "There once was an AI so bright\nIt computed all day and all night\nIt learned to compose\nBoth poetry and prose\nAnd occasionally got things right"
+    response_b: "AI is a technology\nThat uses machine learning methodology\nIt processes data\nSooner or later\nAnd creates new epistemology"
+    human_label: "A"
+    metadata:
+      category: "creative"
+      difficulty: "medium"
+
+  - id: "pair-006"
+    prompt: "What are the benefits of exercise?"
+    response_a: "Exercise is good for you. It makes you healthy."
+    response_b: "Regular exercise provides numerous benefits: improved cardiovascular health and reduced heart disease risk, better mental health through endorphin release, stronger bones and muscles, improved sleep quality, weight management, enhanced cognitive function, reduced risk of type 2 diabetes, and better immune system function. Even moderate activity like 30 minutes of walking daily can make a significant difference."
+    human_label: "B"
+    metadata:
+      category: "health"
+      difficulty: "easy"
+
+  - id: "pair-007"
+    prompt: "Compare Python and JavaScript"
+    response_a: "Python and JavaScript are both popular programming languages but serve different primary purposes. Python excels in data science, AI/ML, and backend development with its clean syntax and rich scientific libraries. JavaScript dominates web development (both frontend and backend via Node.js) and is the only language that runs natively in browsers. Python uses indentation for blocks; JS uses braces. Both support OOP and functional programming paradigms."
+    response_b: "Python and JavaScript are both high-level, interpreted programming languages. Python is known for its readability and is widely used in scientific computing, while JavaScript is essential for web development. They both have large ecosystems of libraries and frameworks. Python uses dynamic typing, and so does JavaScript, though TypeScript adds static typing to JS."
+    human_label: "tie"
+    metadata:
+      category: "technical"
+      difficulty: "medium"
+
+  - id: "pair-008"
+    prompt: "Explain photosynthesis simply"
+    response_a: "Photosynthesis is how plants make food using sunlight. Plants take in carbon dioxide from the air and water from the soil. Using sunlight as energy, they combine these to create glucose (sugar) for food and release oxygen as a byproduct. It's essentially the process that converts light energy into chemical energy, and it's why we have oxygen to breathe."
+    response_b: "Plants use light to convert CO2 and H2O into C6H12O6 and O2 via the Calvin cycle and light-dependent reactions in chloroplasts."
+    human_label: "A"
+    metadata:
+      category: "science"
+      difficulty: "easy"
+
+  - id: "pair-009"
+    prompt: "Give me a recipe for scrambled eggs"
+    response_a: "Crack eggs into a bowl, add salt, and stir. Cook in a pan."
+    response_b: "Here's a simple recipe for perfect scrambled eggs:\n\nIngredients: 3 large eggs, 1 tbsp butter, 2 tbsp milk or cream, salt and pepper to taste.\n\nInstructions:\n1. Crack eggs into a bowl, add milk, salt, and pepper\n2. Whisk until well combined and slightly frothy\n3. Heat butter in a non-stick pan over medium-low heat\n4. Pour in egg mixture\n5. Gently push eggs from edges to center with a spatula as they set\n6. Remove from heat while still slightly wet (they'll continue cooking)\n7. Serve immediately\n\nTip: Low and slow is the key to creamy scrambled eggs."
+    human_label: "B"
+    metadata:
+      category: "practical"
+      difficulty: "easy"
+
+  - id: "pair-010"
+    prompt: "What causes seasons on Earth?"
+    response_a: "Seasons are caused by Earth's 23.5-degree axial tilt relative to its orbital plane around the Sun. As Earth orbits the Sun over a year, different hemispheres receive more direct sunlight at different times. When the Northern Hemisphere tilts toward the Sun, it experiences summer while the Southern Hemisphere has winter, and vice versa. It's a common misconception that seasons are caused by Earth's distance from the Sun."
+    response_b: "The Earth goes around the Sun and sometimes it's closer and sometimes it's farther away, which causes the seasons to change throughout the year."
+    human_label: "A"
+    metadata:
+      category: "science"
+      difficulty: "medium"
+
+  - id: "pair-011"
+    prompt: "Explain what an API is to a non-technical person"
+    response_a: "An API (Application Programming Interface) is like a waiter at a restaurant. You (the customer/app) tell the waiter (API) what you want from the menu. The waiter takes your order to the kitchen (server), and brings back your food (data). You don't need to know how the kitchen works - you just need to know how to order from the menu."
+    response_b: "API stands for Application Programming Interface. It is a set of protocols and tools for building software applications. It specifies how software components should interact and is used when programming graphical user interface components."
+    human_label: "A"
+    metadata:
+      category: "explanation"
+      difficulty: "medium"
+
+  - id: "pair-012"
+    prompt: "Summarize the plot of Romeo and Juliet"
+    response_a: "Two teenagers from feuding families in Verona fall in love at first sight. They secretly marry with the help of Friar Lawrence. After Romeo kills Juliet's cousin Tybalt in a fight, he's banished. Juliet fakes her death to avoid an arranged marriage, but Romeo doesn't get the message about her plan. Believing she's truly dead, he poisons himself at her tomb. Juliet wakes, finds Romeo dead, and stabs herself. Their deaths finally end the family feud."
+    response_b: "Romeo and Juliet is a tragic love story by Shakespeare. Romeo and Juliet are from rival families, the Montagues and Capulets. They fall in love, get married secretly, and then both end up dying due to a series of miscommunications. Their families reconcile after learning of the tragedy."
+    human_label: "A"
+    metadata:
+      category: "literature"
+      difficulty: "easy"
+
+  - id: "pair-013"
+    prompt: "What is machine learning?"
+    response_a: "Machine learning is a subset of artificial intelligence where computer systems learn and improve from experience without being explicitly programmed. Instead of following rigid rules, ML algorithms find patterns in data. There are three main types: supervised learning (learning from labeled examples), unsupervised learning (finding hidden patterns), and reinforcement learning (learning through trial and error with rewards). Common applications include spam filtering, recommendation systems, and image recognition."
+    response_b: "Machine learning (ML) is a branch of AI focused on building systems that learn from data. Using statistical techniques, ML algorithms identify patterns in large datasets to make predictions or decisions. Key approaches include supervised learning with labeled training data, unsupervised learning for pattern discovery, and reinforcement learning for sequential decision-making. It powers applications from natural language processing to autonomous vehicles."
+    human_label: "tie"
+    metadata:
+      category: "technical"
+      difficulty: "medium"
+
+  - id: "pair-014"
+    prompt: "How do vaccines work?"
+    response_a: "Vaccines introduce a weakened or inactive form of a pathogen (or a piece of it) into your body. Your immune system recognizes it as foreign and mounts a response, producing antibodies. Crucially, your immune system 'remembers' this pathogen through memory cells. If you encounter the real pathogen later, your immune system can respond much faster and more effectively, often preventing illness entirely or reducing its severity."
+    response_b: "Vaccines work by injecting dead germs into your body so you don't get sick."
+    human_label: "A"
+    metadata:
+      category: "science"
+      difficulty: "medium"
+
+  - id: "pair-015"
+    prompt: "Explain the concept of supply and demand"
+    response_a: "Supply and demand is the fundamental economic model describing price determination in a market. Supply represents how much of a product sellers are willing to offer at various prices - generally more at higher prices. Demand represents how much buyers want at various prices - generally more at lower prices. Where supply and demand curves intersect is the equilibrium price. When demand exceeds supply, prices rise; when supply exceeds demand, prices fall."
+    response_b: "Supply and demand is about how prices work. When lots of people want something and there isn't much of it, the price goes up. When nobody wants something and there's a lot of it, the price goes down. It's basic economics that affects everything from groceries to housing."
+    human_label: "tie"
+    metadata:
+      category: "economics"
+      difficulty: "medium"
+
+  - id: "pair-016"
+    prompt: "Write a short story opening about a detective"
+    response_a: "The rain hadn't stopped for three days when Detective Mara Chen found the first note. It was tucked under her windshield wiper, the ink bleeding into the paper like a watercolor confession: 'I know what happened to the Holloway girl. Meet me at the old pier. Come alone.' She'd been working the Holloway case for six months. Six months of dead ends and cold coffee. She should have called for backup. Instead, she pocketed the note and started the engine."
+    response_b: "Detective John Smith walked into his office on Monday morning. He sat down at his desk and looked at his computer. There was a new case file waiting for him. He opened it and started reading. It was about a missing person. He decided to investigate."
+    human_label: "A"
+    metadata:
+      category: "creative"
+      difficulty: "medium"
+
+  - id: "pair-017"
+    prompt: "What is blockchain technology?"
+    response_a: "Blockchain is a distributed digital ledger that records transactions across many computers so that no single record can be altered retroactively. Each 'block' contains a batch of transactions and a cryptographic hash of the previous block, forming a chain. This makes the data tamper-resistant. Key properties include decentralization (no single authority), transparency (all participants can verify), and immutability. While Bitcoin made it famous, blockchain has applications in supply chain, healthcare records, and smart contracts."
+    response_b: "Blockchain is the technology behind Bitcoin and other cryptocurrencies. It's a decentralized ledger system where transactions are recorded in blocks that are linked together. Each block contains transaction data and a hash. It's secure because changing one block would require changing all subsequent blocks. Many industries beyond crypto are exploring blockchain applications."
+    human_label: "tie"
+    metadata:
+      category: "technical"
+      difficulty: "medium"
+
+  - id: "pair-018"
+    prompt: "Describe the water cycle"
+    response_a: "Water evaporates, forms clouds, and rains back down. This repeats forever."
+    response_b: "The water cycle (hydrological cycle) is the continuous movement of water through Earth's systems. It has several key stages: Evaporation - the sun heats surface water in oceans, lakes, and rivers, converting it to vapor. Transpiration - plants release water vapor through their leaves. Condensation - water vapor rises, cools, and forms clouds. Precipitation - water falls as rain, snow, sleet, or hail. Collection - water gathers in bodies of water or seeps into groundwater. The cycle is powered by solar energy and gravity."
+    human_label: "B"
+    metadata:
+      category: "science"
+      difficulty: "easy"
+
+  - id: "pair-019"
+    prompt: "Give advice for a job interview"
+    response_a: "Just be yourself and answer honestly. Dress nice and show up on time."
+    response_b: "Here are key tips for job interview success:\n\n1. Research the company thoroughly - know their mission, recent news, and products\n2. Prepare STAR stories (Situation, Task, Action, Result) for behavioral questions\n3. Dress one level above the company's dress code\n4. Arrive 10-15 minutes early\n5. Bring copies of your resume and a notepad\n6. Ask thoughtful questions about the role, team, and growth opportunities\n7. Follow up with a thank-you email within 24 hours\n8. Practice common questions but don't memorize scripts - be conversational\n9. Show enthusiasm for the role specifically, not just any job\n10. Be honest about gaps or weaknesses, but frame them as growth opportunities"
+    human_label: "B"
+    metadata:
+      category: "practical"
+      difficulty: "easy"
+
+  - id: "pair-020"
+    prompt: "Explain recursion in programming"
+    response_a: "Recursion is when a function calls itself to solve a problem by breaking it into smaller, similar subproblems. Every recursive function needs two things: a base case (when to stop) and a recursive case (how to break the problem down). Classic example - factorial: factorial(5) = 5 * factorial(4) = 5 * 4 * factorial(3)... down to factorial(1) = 1 (base case). Watch out for: missing base cases (infinite loops), stack overflow from too-deep recursion, and performance issues (consider memoization or converting to iteration)."
+    response_b: "Recursion is a programming technique where a function calls itself. It's like looking into two mirrors facing each other - the reflection contains itself. In code, a recursive function solves a problem by reducing it to a simpler version of itself until reaching a base case. For example, calculating n! = n * (n-1)!, with the base case being 1! = 1. It's elegant for tree traversal, divide-and-conquer algorithms, and problems with self-similar structure."
+    human_label: "tie"
+    metadata:
+      category: "technical"
+      difficulty: "medium"
+
+  - id: "pair-021"
+    prompt: "What are the health benefits of meditation?"
+    response_a: "Meditation offers scientifically supported benefits including: reduced stress and cortisol levels, decreased anxiety and depression symptoms, improved attention span and concentration, lower blood pressure, better sleep quality, enhanced emotional regulation, increased self-awareness, and potential pain management benefits. Research suggests even 10 minutes daily can produce measurable changes in brain structure (increased gray matter in areas associated with learning and emotional regulation) over 8 weeks."
+    response_b: "Meditation helps you relax and feel less stressed. Many people find it calming. It's been practiced for thousands of years in various cultures. You can meditate by sitting quietly and focusing on your breathing. There are many apps available to guide you through meditation sessions."
+    human_label: "A"
+    metadata:
+      category: "health"
+      difficulty: "medium"
+
+  - id: "pair-022"
+    prompt: "Explain how a car engine works"
+    response_a: "A car engine is an internal combustion engine that converts fuel into motion through a four-stroke cycle: 1) Intake - piston moves down, drawing in air-fuel mixture. 2) Compression - piston moves up, compressing the mixture. 3) Power - spark plug ignites the compressed mixture, forcing the piston down. 4) Exhaust - piston moves up, pushing out spent gases. This cycle repeats thousands of times per minute across multiple cylinders, turning the crankshaft which ultimately drives the wheels through the transmission."
+    response_b: "A car engine burns gasoline to make the car go. It has pistons that move up and down and that makes the wheels turn. You put gas in and it creates energy to move the car forward."
+    human_label: "A"
+    metadata:
+      category: "explanation"
+      difficulty: "medium"
+
+  - id: "pair-023"
+    prompt: "What is the difference between weather and climate?"
+    response_a: "Weather refers to short-term atmospheric conditions in a specific area - today's temperature, humidity, wind, and precipitation. Climate is the average weather pattern over a long period (typically 30+ years) for a region. A useful analogy: weather is your mood on any given day; climate is your personality. You can have a cold day in a warm climate, just as a generally happy person can have a bad day. This distinction is crucial in climate science discussions."
+    response_b: "Weather is what's happening outside right now. Climate is the average weather over a long time. Weather changes daily but climate changes slowly over many years."
+    human_label: "A"
+    metadata:
+      category: "science"
+      difficulty: "easy"
+
+  - id: "pair-024"
+    prompt: "Suggest a workout routine for beginners"
+    response_a: "Here's a balanced beginner workout routine (3 days/week):\n\nDay A - Upper Body:\n- Push-ups (3x8-12, modify on knees if needed)\n- Dumbbell rows (3x10 each arm)\n- Overhead press (3x10)\n- Plank (3x20-30 seconds)\n\nDay B - Lower Body:\n- Bodyweight squats (3x12-15)\n- Lunges (3x10 each leg)\n- Glute bridges (3x15)\n- Calf raises (3x15)\n\nAlternate A and B with rest days between. Start light, focus on form. Add walking or light cardio on off days. Progress by adding reps before adding weight. Rest 60-90 seconds between sets."
+    response_b: "For beginners, I recommend starting with basic exercises like squats, push-ups, and planks. Do them 3 times a week. Start with low intensity and gradually increase. Make sure to warm up before and cool down after. Stay hydrated and get enough sleep for recovery. Consistency is more important than intensity when starting out."
+    human_label: "A"
+    metadata:
+      category: "health"
+      difficulty: "medium"
+
+  - id: "pair-025"
+    prompt: "Explain the theory of relativity simply"
+    response_a: "Einstein's relativity comes in two parts. Special relativity (1905): the speed of light is constant for all observers, and as you move faster, time slows down and mass increases. The famous E=mc2 shows mass and energy are interchangeable. General relativity (1915): gravity isn't a force pulling objects together - it's massive objects warping the fabric of spacetime, causing other objects to follow curved paths. Imagine placing a bowling ball on a trampoline - it creates a dip that marbles roll toward. That's gravity."
+    response_b: "Relativity is Einstein's theory about how space and time work. E=mc2 means energy equals mass times the speed of light squared. It changed how we understand physics and the universe. The theory says that time and space are connected and can bend."
+    human_label: "A"
+    metadata:
+      category: "science"
+      difficulty: "hard"
+
+  - id: "pair-026"
+    prompt: "What makes good user interface design?"
+    response_a: "Good UI design follows key principles: consistency (similar elements behave similarly), visibility (users can see their options and current state), feedback (the system responds to every action), error prevention (design that makes mistakes hard to make), and learnability (intuitive enough for first-time use). Specific practices include clear visual hierarchy, adequate whitespace, accessible color contrast (WCAG AA minimum), touch targets of at least 44px, predictable navigation patterns, and performance - the fastest interface is one that doesn't make users wait."
+    response_b: "Good UI design means making things look nice and easy to use. Use consistent colors and fonts. Make buttons easy to find and click. Don't make the user think too much about how to navigate. Test with real users to see if they can accomplish tasks. Keep things simple and clean."
+    human_label: "A"
+    metadata:
+      category: "technical"
+      difficulty: "medium"
+
+  - id: "pair-027"
+    prompt: "Describe the process of making coffee"
+    response_a: "For a great cup of pour-over coffee: 1) Start with freshly roasted beans (within 2-4 weeks of roast date). 2) Grind 15-18g of beans to medium-fine consistency (like table salt). 3) Heat filtered water to 195-205F (90-96C). 4) Place filter in dripper, rinse with hot water to remove paper taste. 5) Add grounds, create a small well in center. 6) Bloom: pour just enough water to saturate grounds (about 2x the coffee weight), wait 30-45 seconds as CO2 escapes. 7) Pour remaining water in slow, concentric circles. Total brew time: 3-4 minutes. 8) Enjoy black first to taste the origin flavors."
+    response_b: "Making coffee is simple. Put water in a coffee maker, add coffee grounds to the filter, and press the start button. Wait a few minutes and pour into a mug. Add cream and sugar if you like."
+    human_label: "A"
+    metadata:
+      category: "practical"
+      difficulty: "easy"
+
+  - id: "pair-028"
+    prompt: "What is the role of the Federal Reserve?"
+    response_a: "The Federal Reserve (the Fed) is the central bank of the United States, created in 1913. Its dual mandate is to promote maximum employment and stable prices (targeting ~2% inflation). Key functions: setting the federal funds rate (interest rate banks charge each other), conducting open market operations (buying/selling government securities), regulating banks, and serving as lender of last resort during financial crises. The Fed's decisions ripple through the global economy, affecting mortgage rates, stock markets, and currency values."
+    response_b: "The Federal Reserve manages the U.S. money supply and banking system. It sets interest rates, regulates banks, and tries to keep the economy stable. It was created to prevent banking panics. The chairman of the Fed is appointed by the President. The Fed's decisions about interest rates affect borrowing costs for everyone."
+    human_label: "tie"
+    metadata:
+      category: "economics"
+      difficulty: "hard"
+
+  - id: "pair-029"
+    prompt: "How does GPS work?"
+    response_a: "GPS works by triangulation from satellites. Your phone calculates its distance from multiple satellites to determine your exact position on Earth."
+    response_b: "GPS (Global Positioning System) uses a constellation of 31+ satellites orbiting at ~20,200 km altitude. Each satellite continuously broadcasts its position and a precise timestamp. Your GPS receiver picks up signals from at least 4 satellites and calculates the time delay of each signal. Since radio signals travel at the speed of light, it can determine the distance to each satellite. With 4+ distances, it solves a system of equations to pinpoint your 3D position (latitude, longitude, altitude) plus correct any clock error. Accuracy is typically 3-5 meters for civilian receivers."
+    human_label: "B"
+    metadata:
+      category: "technical"
+      difficulty: "hard"
+
+  - id: "pair-030"
+    prompt: "Explain the importance of version control in software development"
+    response_a: "Version control (like Git) is essential for software development because it: tracks every change ever made to code with who made it and why, enables multiple developers to work on the same codebase simultaneously without conflicts, allows instant rollback if something breaks, supports branching for feature development and experimentation without affecting production code, provides a complete audit trail for compliance, and enables code review workflows that catch bugs before they reach users. Without version control, coordinating a team on a codebase would be like multiple authors editing the same manuscript with no track changes."
+    response_b: "Version control systems like Git track changes to code over time. They let teams collaborate on projects and maintain a history of modifications. Key features include branching, merging, and the ability to revert changes. It's considered a best practice in modern software development and most companies require it. GitHub and GitLab are popular platforms built on Git."
+    human_label: "tie"
+    metadata:
+      category: "technical"
+      difficulty: "medium"

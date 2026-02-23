@@ -1,48 +1,69 @@
-"""Data models for JudgeBench."""
+"""Core pydantic models for judgebench."""
 
-from typing import Any
+from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+
+Label = Literal["A", "B", "tie"]
 
 
 class LabeledPair(BaseModel):
-    """A labeled pair of responses for pairwise comparison."""
+    """A single evaluation pair with a human-assigned ground-truth label."""
 
     id: str
     prompt: str
     response_a: str
     response_b: str
-    human_label: str  # "a", "b", or "tie"
-    category: str  # "factual", "creative", "reasoning", "safety", "coding"
-    metadata: dict[str, Any] = {}
+    human_label: Label
+    metadata: dict = Field(default_factory=dict)
+
+
+class JudgeConfig(BaseModel):
+    """Configuration for the judge LLM."""
+
+    provider: str = "anthropic"
+    model: str = "claude-haiku-4-5-20251001"
+    params: dict = Field(default_factory=dict)
+    system_prompt: str | None = None
 
 
 class JudgeVerdict(BaseModel):
-    """Result of judging a single pair in both orderings."""
+    """A single verdict from the judge on one pair in one ordering."""
 
     pair_id: str
-    forward_choice: str  # "a" or "b"
-    reversed_choice: str  # "a" or "b" (after swapping positions)
-    forward_reasoning: str
-    reversed_reasoning: str
-    consistent: bool  # forward matches reversed after accounting for swap
+    judge_label: Label
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str = ""
+    position: str = Field(
+        description="Which ordering was used: 'original' (A first) or 'swapped' (B first)"
+    )
 
 
 class BiasReport(BaseModel):
-    """Aggregated bias metrics across all pairs."""
+    """Result of a single bias detection analysis."""
 
-    position_bias_rate: float  # fraction of inconsistent swaps
-    verbosity_bias_rho: float  # Spearman correlation(score, length)
-    self_enhance_delta: float  # score difference when model evaluates own output
-    leniency_score: float  # TPR / (TPR + TNR) asymmetry
+    bias_type: str
+    score: float = Field(ge=0.0, le=1.0)
+    details: dict = Field(default_factory=dict)
+    flagged: bool = False
 
 
-class AgreementMetrics(BaseModel):
-    """Statistical agreement between judge and human labels."""
+class BenchResult(BaseModel):
+    """Full benchmark result for a single judge."""
 
-    cohens_kappa: float
-    krippendorffs_alpha: float
-    spearman_rho: float
-    spearman_p: float
-    mcnemars_chi2: float
-    mcnemars_p: float
+    judge_config: JudgeConfig
+    verdicts: list[JudgeVerdict] = Field(default_factory=list)
+    agreement_metrics: dict = Field(default_factory=dict)
+    bias_reports: list[BiasReport] = Field(default_factory=list)
+    overall_reliability: float = Field(ge=0.0, le=1.0, default=0.0)
+
+
+class Dataset(BaseModel):
+    """A dataset of labeled pairs."""
+
+    name: str
+    description: str = ""
+    pairs: list[LabeledPair] = Field(default_factory=list)
