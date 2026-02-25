@@ -8,5 +8,9 @@ build/
 .pytest_cache/
 *.egg
 .env
+.env.*
+*.key
+*.pem
+credentials*
 results/
 comparison/
